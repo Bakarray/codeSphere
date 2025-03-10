@@ -24,15 +24,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Fetch and display all posts
-    fetch('/api/posts')
+    fetch('http://localhost:3000/api/posts')
         .then(res => res.json())
         .then(posts => {
             const postDiv = document.getElementById('posts');
+            console.log(posts);
             posts.forEach(post => {
                 const div = document.createElement('div');
                 div.className = 'post';
                 div.innerHTML = `
-                    <h3><a href="/post.html?id=${post.id}">${post.title}</a></h3>
+                    <h3><a href="post.html?id=${post.id}">${post.title}</a></h3>
                     <p>By ${post.username} on ${new Date(post.created_at).toLocaleString()}</p>
                 `;
                 postDiv.appendChild(div);

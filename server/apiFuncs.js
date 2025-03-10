@@ -1,4 +1,5 @@
 
+const { error } = require("console");
 const { createHmac, pbkdf2, randomBytes } = require("crypto");
 const {Pool} = require("pg");
 
@@ -113,7 +114,6 @@ async function createPost(req, res, user) {
             'INSERT INTO posts (title, content, user_id) VALUES ($1, $2, $3) RETURNING id', 
             [title, content, user.id]
         );
-        console.log('result: ', result);
         res.writeHead(201, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ id: result.rows[0].id }));
     } catch (err) {
@@ -135,6 +135,58 @@ async function getPosts(req, res) {
     } catch (err) {
         res.writeHead(500, 'server error', {'Content-Type': 'application/json'});
         res.end(JSON.stringify({error: 'Internal server error'}));
+    }
+}
+
+async function getPost(req, res, id) {
+    try {
+        const query = 'SELECT p.id, p.title, p.content, p.created_at, u.username' +
+            ' FROM posts p JOIN users u ON p.user_id = u.id ' +
+            'WHERE p.id = $1';
+        
+        const postResult = await pool.query(
+            query, [id]
+        );
+
+        if (!postResult.rows.length) {
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'post not found' }));
+            return;
+        }
+        const commentsResult = await pool.query(
+            'SELECT c.id, c.content, c.created_at, u.username ' +
+            'FROM comments c JOIN users u ON c.user_id = u.id  WHERE c.post_id = $1 ' +
+            'ORDER BY c.created_at ASC',
+            [id]
+        );
+        const post = postResult.rows[0];
+        post.comments = commentsResult.rows;
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(post));
+    } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+    }
+}
+
+
+async function addComment(req, res, user, postId) {
+    try {
+        const { content } = await readBody(req);
+        if (!content) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Comment content is required' }))
+            return;
+        }
+        await pool.query(
+            'INSERT INTO comments (content, post_id, user_id) VALUES ($1, $2, $3)',
+            [content, postId, user.id]
+        );
+        res.writeHead(201, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: 'Comment added successfully' }));
+    } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Internal server error' }));
     }
 }
 
@@ -186,7 +238,9 @@ function authenticate(req, res, next) {
 module.exports = {
     register,
     getPosts,
+    getPost,
     login, 
     authenticate,
-    createPost
+    createPost,
+    addComment
 };

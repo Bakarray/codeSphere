@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Fetch post details
     try {
-        fetch(`/api/posts/${postId}`)
+        fetch(`http://localhost:3000/api/posts/${postId}`)
         .then(res => res.json())
         .then(post => {
             document.getElementById('post-content').innerHTML = `
@@ -56,5 +56,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle comment submission
     const form = document.getElementById('comment-form');
-    form.addE
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const content = document.getElementById('comment-content').value;
+
+        try {
+            const res = await fetch(`http://localhost:3000/api/posts/${postId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ content })
+            });
+            if (!res.ok) throw new Error('Failed to add comment');
+            window.location.reload(); //Refresh to show the new comment
+        } catch (err) {
+            console.log(err.message);
+            alert(err.message);
+        }
+    })
 })

@@ -41,11 +41,17 @@ const server = http.createServer((req, res) => {
             api.login(req, res);
         } else if (pathname === '/api/posts' && method === 'POST') {
             api.authenticate(req, res, () => api.createPost(req, res, req.user));
+        } else if (pathname.match(/^\/api\/posts\/\d+$/) && method === 'GET') {
+            const id = pathname.split('/')[3];
+            api.getPost(req, res, id);
+        } else if (pathname.match(/^\/api\/posts\/\d+\/comments$/) && method === 'POST') {
+            console.log('here');
+            const postId = pathname.split('/')[3];
+            api.authenticate(req, res, () => api.addComment(req, res, req.user, postId));
         }
     } else {
         // Serve static files from the 'public' dir
         const filePath = path.join(__dirname, 'public', pathname === '/' ? 'index.html' : pathname)
-        console.log(filePath)
         const ext = extname(filePath)
         const contentType = {
             '.html': 'text/html',
